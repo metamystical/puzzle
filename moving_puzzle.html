@@ -3,7 +3,7 @@
 <head>
   <title>Jigsaw Puzzle</title>
   <script>
-    const COMPLETION_MESSAGE = ['Congratulations'] // one to three phrases allowed
+    const COMPLETION_MESSAGE = ['The Standard Model'] // one to three phrases allowed
     const PUZZLE_WIDTH = 5
     const PUZZLE_HEIGHT = 7
     const PUZZLE_HOVER_TINT = '#009900'
@@ -14,10 +14,27 @@
     function init () { img.src = IMAGE }
 
     const pieces = []
-    let currentPiece = null; let currentDropPiece = null
+    let currentPiece; let currentDropPiece
     let puzzleWidth; let puzzleHeight
     let pieceWidth; let pieceHeight
     let canvas; let stage
+    
+    function paintPuzzle (grid, skip) {
+      stage.globalAlpha = 1
+      stage.clearRect(0, 0, puzzleWidth, puzzleHeight)
+      pieces.forEach ((piece) => {
+        if (piece === skip) return
+        stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, piece.x, piece.y, pieceWidth, pieceHeight)
+        if (grid) stage.strokeRect(piece.x, piece.y, pieceWidth, pieceHeight)
+      })
+    }
+
+    function paintMovingPiece (piece, x, y) {
+      stage.clearRect(piece.x, piece.y, pieceWidth, pieceHeight)
+      stage.globalAlpha = 0.7
+      stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, x, y, pieceWidth, pieceHeight)
+      stage.strokeRect(x, y, pieceWidth, pieceHeight)
+    }
     
     function onImage (e) {
       pieceWidth = Math.floor(img.width / PUZZLE_WIDTH)
@@ -30,7 +47,6 @@
       canvas.height = puzzleHeight
       canvas.style.border = '1px solid black'
       stage = canvas.getContext('2d')
-      stage.clearRect(0, 0, puzzleWidth, puzzleHeight)
 
       for (let i = 0; i < PUZZLE_WIDTH * PUZZLE_HEIGHT; i++) { // start coordinates
         pieces.push({ sx: (i % PUZZLE_WIDTH) * pieceWidth, sy: Math.floor(i / PUZZLE_WIDTH) * pieceHeight })
@@ -45,9 +61,8 @@
         const piece = pieces[i]
         piece.x = (i % PUZZLE_WIDTH) * pieceWidth
         piece.y = Math.floor(i / PUZZLE_WIDTH) * pieceHeight
-        stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, piece.x, piece.y, pieceWidth, pieceHeight)
-        stage.strokeRect(piece.x, piece.y, pieceWidth, pieceHeight)
       }
+      paintPuzzle(true)
       document.onmousedown = onMouse
     }
 
@@ -62,6 +77,7 @@
           setTimeout(moveAll, 0)
           return
         }
+        currentDropPiece = null
         pieces.forEach((piece) => { // destination
           if (currentPiece.sx === piece.x && currentPiece.sy === piece.y) currentDropPiece = piece
         })
@@ -71,51 +87,31 @@
           const delta = 20
           const x = Math.floor(currentPiece.x + j * (currentPiece.sx - currentPiece.x) / delta)
           const y = Math.floor(currentPiece.y + j * (currentPiece.sy - currentPiece.y) / delta)
-          onMove(x, y)
-          if (++j <= delta) setTimeout(move, 40)
+          paintPuzzle (true, currentPiece)
+          paintMovingPiece(currentPiece, x, y)
+          if (++j < delta) setTimeout(move, 40)
           else {
-            pieceDropped()
-            setTimeout(moveAll, 0)
+            if (currentDropPiece !== null) {
+              const tmp = { x: currentPiece.x, y: currentPiece.y }
+              currentPiece.x = currentDropPiece.x
+              currentPiece.y = currentDropPiece.y
+              currentDropPiece.x = tmp.x
+              currentDropPiece.y = tmp.y
+            }
+
+            let gameWin = true
+            pieces.forEach((piece) => {
+              if (piece.x !== piece.sx || piece.y !== piece.sy) gameWin = false
+            })
+            paintPuzzle(!gameWin)
+            if (gameWin) gameOver()
+            else setTimeout(moveAll, 0)
           }
         }
       }
     }
 
-    function onMove (x, y) {
-      stage.clearRect(0, 0, puzzleWidth, puzzleHeight)
-      pieces.forEach((piece) => {
-        if (piece === currentPiece) return
-        stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, piece.x, piece.y, pieceWidth, pieceHeight)
-        stage.strokeRect(piece.x, piece.y, pieceWidth,pieceHeight)
-      })
-      stage.save()
-      stage.globalAlpha = 0.6
-      stage.drawImage(img, currentPiece.sx, currentPiece.sy, pieceWidth, pieceHeight, x, y, pieceWidth, pieceHeight)
-      stage.restore()
-      stage.strokeRect( x , y, pieceWidth, pieceHeight)
-    }
-
-    function pieceDropped () {
-      if (currentDropPiece !== null) {
-        const tmp = { x: currentPiece.x, y: currentPiece.y }
-        currentPiece.x = currentDropPiece.x
-        currentPiece.y = currentDropPiece.y
-        currentDropPiece.x = tmp.x
-        currentDropPiece.y = tmp.y
-      }
-
-      let gameWin = true
-      pieces.forEach((piece) => {
-        if (piece.x !== piece.sx || piece.y !== piece.sy) gameWin = false
-      })
-      if (gameWin) setTimeout(gameOver, 0)
-    }
-
     function gameOver() {
-      stage.clearRect(0, 0, puzzleWidth, puzzleHeight)
-      pieces.forEach((piece) => {
-        stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, piece.x, piece.y, pieceWidth, pieceHeight)
-      })
       const msg = COMPLETION_MESSAGE
       if (msg.length < 1 || msg.length > 3) return
       const height = msg.length * 20 + 20
