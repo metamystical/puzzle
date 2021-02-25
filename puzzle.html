@@ -17,7 +17,26 @@
     let puzzleWidth; let puzzleHeight
     let pieceWidth; let pieceHeight
     let canvas; let stage
-    
+
+    function paintPuzzle (skip, grid) {
+      stage.globalAlpha = 1
+      stage.clearRect(0, 0, puzzleWidth, puzzleHeight)
+      pieces.forEach ((piece) => {
+        if (piece === skip) return
+        stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, piece.x, piece.y, pieceWidth, pieceHeight)
+        if (grid) stage.strokeRect(piece.x, piece.y, pieceWidth, pieceHeight)
+      })
+    }
+    function paintMovingPiece (piece, mouse) {
+      stage.clearRect(piece.x, piece.y, pieceWidth, pieceHeight)
+      stage.globalAlpha = 0.9
+      stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, mouse.offsetX - (pieceWidth / 2), mouse.offsetY - (pieceHeight / 2), pieceWidth, pieceHeight)
+    }
+    function tintPiece (piece) {
+      stage.globalAlpha = 0.4
+      stage.fillStyle = PUZZLE_HOVER_TINT
+      stage.fillRect(piece.x, piece.y, pieceWidth, pieceHeight)
+    }
     function onImage (e) {
       pieceWidth = Math.floor(img.width / PUZZLE_WIDTH)
       pieceHeight = Math.floor(img.height / PUZZLE_HEIGHT)
@@ -29,7 +48,6 @@
       canvas.height = puzzleHeight
       canvas.style.border = '1px solid black'
       stage = canvas.getContext('2d')
-      stage.clearRect(0, 0, puzzleWidth, puzzleHeight)
 
       for (let i = 0; i < PUZZLE_WIDTH * PUZZLE_HEIGHT; i++) { // start coordinates
         pieces.push({ sx: (i % PUZZLE_WIDTH) * pieceWidth, sy: Math.floor(i / PUZZLE_WIDTH) * pieceHeight })
@@ -40,13 +58,11 @@
         pieces[i] = pieces[j]
         pieces[j] = tmp
       }
-      for (let i = 0; i < pieces.length; i++){ // new coordinates
-        const piece = pieces[i]
-        piece.x = (i % PUZZLE_WIDTH) * pieceWidth
-        piece.y = Math.floor(i / PUZZLE_WIDTH) * pieceHeight
-        stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, piece.x, piece.y, pieceWidth, pieceHeight)
-        stage.strokeRect(piece.x, piece.y, pieceWidth, pieceHeight)
+      for (let i = 0; i < pieces.length; i++) { // new coordinates
+        pieces[i].x = (i % PUZZLE_WIDTH) * pieceWidth
+        pieces[i].y = Math.floor(i / PUZZLE_WIDTH) * pieceHeight
       }
+      paintPuzzle()
       document.onmousedown = onMouse
 
     }
@@ -57,38 +73,23 @@
             mouse.offsetY >= piece.y && mouse.offsetY < (piece.y + pieceHeight)) currentPiece = piece
       })
       if (currentPiece === null) return
-      stage.clearRect(currentPiece.x, currentPiece.y, pieceWidth, pieceHeight)
-      stage.save()
-      stage.globalAlpha = 0.9
-      stage.drawImage(img, currentPiece.sx, currentPiece.sy, pieceWidth, pieceHeight, mouse.offsetX - (pieceWidth / 2), mouse.offsetY - (pieceHeight / 2), pieceWidth, pieceHeight)
-      stage.restore()
+      paintMovingPiece(currentPiece, mouse)
       document.onmousemove = onMove
       document.onmouseup = pieceDropped
     }
     function onMove (mouse) {
+      paintPuzzle (currentPiece)
       currentDropPiece = null
-      stage.clearRect(0, 0, puzzleWidth, puzzleHeight)
       pieces.forEach((piece) => {
-        if (piece === currentPiece) return
-        stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, piece.x, piece.y, pieceWidth, pieceHeight)
-        stage.strokeRect(piece.x, piece.y, pieceWidth,pieceHeight)
         if (currentDropPiece === null) {
           if (mouse.offsetX >= piece.x && mouse.offsetX < (piece.x + pieceWidth) &&
               mouse.offsetY >= piece.y && mouse.offsetY < (piece.y + pieceHeight)) {
             currentDropPiece = piece
-            stage.save()
-            stage.globalAlpha = 0.4
-            stage.fillStyle = PUZZLE_HOVER_TINT
-            stage.fillRect(currentDropPiece.x, currentDropPiece.y, pieceWidth, pieceHeight)
-            stage.restore()
+            tintPiece(currentDropPiece)
           }
         }
       })
-      stage.save()
-      stage.globalAlpha = 0.6
-      stage.drawImage(img, currentPiece.sx, currentPiece.sy, pieceWidth, pieceHeight, mouse.offsetX - (pieceWidth / 2), mouse.offsetY - (pieceHeight / 2), pieceWidth, pieceHeight)
-      stage.restore()
-      stage.strokeRect( mouse.offsetX - (pieceWidth / 2), mouse.offsetY - (pieceHeight / 2), pieceWidth, pieceHeight)
+      paintMovingPiece (currentPiece, mouse)
     }
     function pieceDropped (mouse) {
       document.onmousemove = null
@@ -101,15 +102,11 @@
         currentDropPiece.y = tmp.y
       }
 
-      stage.clearRect(0, 0, puzzleWidth, puzzleHeight)
       let gameWin = true
       pieces.forEach((piece) => {
         if (piece.x !== piece.sx || piece.y !== piece.sy) gameWin = false
       })
-      pieces.forEach((piece) => {
-        stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, piece.x, piece.y, pieceWidth, pieceHeight)
-        if (!gameWin) stage.strokeRect(piece.x, piece.y, pieceWidth, pieceHeight)
-      })
+      paintPuzzle(null, !gameWin)
       if (gameWin) setTimeout(gameOver, 0)
     }
     function gameOver() {
