@@ -13,12 +13,12 @@
     function init () { img.src = IMAGE }
 
     const pieces = []
-    let currentPiece = null; let currentDropPiece = null
+    let currentPiece; let currentDropPiece
     let puzzleWidth; let puzzleHeight
     let pieceWidth; let pieceHeight
     let canvas; let stage
 
-    function paintPuzzle (skip, grid) {
+    function paintPuzzle (grid, skip) {
       stage.globalAlpha = 1
       stage.clearRect(0, 0, puzzleWidth, puzzleHeight)
       pieces.forEach ((piece) => {
@@ -27,16 +27,22 @@
         if (grid) stage.strokeRect(piece.x, piece.y, pieceWidth, pieceHeight)
       })
     }
+    
     function paintMovingPiece (piece, mouse) {
       stage.clearRect(piece.x, piece.y, pieceWidth, pieceHeight)
-      stage.globalAlpha = 0.9
-      stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, mouse.offsetX - (pieceWidth / 2), mouse.offsetY - (pieceHeight / 2), pieceWidth, pieceHeight)
+      stage.globalAlpha = 0.7
+      x = mouse.offsetX - (pieceWidth / 2)
+      y = mouse.offsetY - (pieceHeight / 2)
+      stage.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight, x, y, pieceWidth, pieceHeight)
+      stage.strokeRect(x, y, pieceWidth, pieceHeight)
     }
+    
     function tintPiece (piece) {
       stage.globalAlpha = 0.4
       stage.fillStyle = PUZZLE_HOVER_TINT
       stage.fillRect(piece.x, piece.y, pieceWidth, pieceHeight)
     }
+    
     function onImage (e) {
       pieceWidth = Math.floor(img.width / PUZZLE_WIDTH)
       pieceHeight = Math.floor(img.height / PUZZLE_HEIGHT)
@@ -62,10 +68,11 @@
         pieces[i].x = (i % PUZZLE_WIDTH) * pieceWidth
         pieces[i].y = Math.floor(i / PUZZLE_WIDTH) * pieceHeight
       }
-      paintPuzzle()
+      paintPuzzle(true)
       document.onmousedown = onMouse
 
     }
+
     function onMouse (mouse) {
       currentPiece = null
       pieces.forEach((piece) => {
@@ -78,7 +85,7 @@
       document.onmouseup = pieceDropped
     }
     function onMove (mouse) {
-      paintPuzzle (currentPiece)
+      paintPuzzle (true, currentPiece)
       currentDropPiece = null
       pieces.forEach((piece) => {
         if (currentDropPiece === null) {
@@ -91,6 +98,7 @@
       })
       paintMovingPiece (currentPiece, mouse)
     }
+
     function pieceDropped (mouse) {
       document.onmousemove = null
       document.onmouseup = null
@@ -106,9 +114,10 @@
       pieces.forEach((piece) => {
         if (piece.x !== piece.sx || piece.y !== piece.sy) gameWin = false
       })
-      paintPuzzle(null, !gameWin)
-      if (gameWin) setTimeout(gameOver, 0)
+      paintPuzzle(!gameWin)
+      if (gameWin) gameOver()
     }
+
     function gameOver() {
       document.onmousedown = null
       document.onmousemove = null
@@ -133,5 +142,4 @@
 <body onload="init()">
   <canvas id="canvas"></canvas>
 </body>
-
 </html>
